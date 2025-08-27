@@ -1,0 +1,403 @@
+// GMBO - Funcionalidad de Cambio de Tema, Carrusel y Navegación
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Función para cambiar el tema
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        // Aplicar nuevo tema
+        document.documentElement.setAttribute('data-theme', newTheme);
+        
+        // Guardar preferencia en localStorage
+        localStorage.setItem('gmbo-theme', newTheme);
+        
+        // Actualizar icono del botón
+        updateThemeIcon(newTheme);
+        
+        // Agregar animación de transición
+        document.body.classList.add('theme-transitioning');
+        setTimeout(() => {
+            document.body.classList.remove('theme-transitioning');
+        }, 300);
+    }
+    
+    // Función para actualizar el icono del botón
+    function updateThemeIcon(theme) {
+        const themeToggle = document.querySelector('.theme-toggle');
+        if (themeToggle) {
+            if (theme === 'light') {
+                themeToggle.innerHTML = '🌙';
+                themeToggle.setAttribute('title', 'Cambiar a tema oscuro');
+            } else {
+                themeToggle.innerHTML = '☀️';
+                themeToggle.setAttribute('title', 'Cambiar a tema claro');
+            }
+        }
+    }
+    
+    // Función para cargar el tema guardado
+    function loadSavedTheme() {
+        const savedTheme = localStorage.getItem('gmbo-theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        } else {
+            // Detectar preferencia del sistema
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const defaultTheme = prefersDark ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', defaultTheme);
+            updateThemeIcon(defaultTheme);
+        }
+    }
+    
+    // Función para el carrusel de texto
+    function initTextCarousel() {
+        const carouselItems = document.querySelectorAll('.carousel-item');
+        let currentIndex = 0;
+        
+        function showNextItem() {
+            // Ocultar item actual
+            carouselItems[currentIndex].classList.remove('active');
+            
+            // Avanzar al siguiente
+            currentIndex = (currentIndex + 1) % carouselItems.length;
+            
+            // Mostrar nuevo item
+            carouselItems[currentIndex].classList.add('active');
+        }
+        
+        // Cambiar cada 3 segundos
+        setInterval(showNextItem, 3000);
+        
+        // Agregar indicadores de navegación
+        const carousel = document.querySelector('.text-carousel');
+        const indicators = document.createElement('div');
+        indicators.className = 'carousel-indicators';
+        indicators.style.cssText = 'position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 3;';
+        
+        carouselItems.forEach((_, index) => {
+            const indicator = document.createElement('span');
+            indicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.3s ease;';
+            
+            if (index === 0) {
+                indicator.style.background = 'white';
+            }
+            
+            indicator.addEventListener('click', () => {
+                carouselItems[currentIndex].classList.remove('active');
+                currentIndex = index;
+                carouselItems[currentIndex].classList.add('active');
+                
+                // Actualizar indicadores
+                document.querySelectorAll('.carousel-indicators span').forEach((ind, i) => {
+                    ind.style.background = i === index ? 'white' : 'rgba(255,255,255,0.5)';
+                });
+            });
+            
+            indicators.appendChild(indicator);
+        });
+        
+        carousel.appendChild(indicators);
+        
+        // Actualizar indicadores automáticamente
+        setInterval(() => {
+            document.querySelectorAll('.carousel-indicators span').forEach((ind, i) => {
+                ind.style.background = i === currentIndex ? 'white' : 'rgba(255,255,255,0.5)';
+            });
+        }, 100);
+    }
+    
+    // Función para la navegación con animaciones
+    function initNavigation() {
+        const navLinks = document.querySelectorAll('.nav-item.nav-link');
+        const sections = document.querySelectorAll('.section-content');
+        
+        // Agregar indicador de navegación
+        const navScroller = document.querySelector('.nav-scroller');
+        const navIndicator = document.createElement('div');
+        navIndicator.className = 'nav-indicator';
+        navIndicator.style.width = '0px';
+        navScroller.style.position = 'relative';
+        navScroller.appendChild(navIndicator);
+        
+        // Mapeo de enlaces a secciones
+        const sectionMap = {
+            'Cumplimiento de Regulaciones': 'regulaciones',
+            'Operacion y grestion de despacho': 'operacion',
+            'Programas de Fomento': 'programas',
+            'Certificaciones': 'certificaciones',
+            'Auditorias Preventivas': 'auditorias'
+        };
+        
+        navLinks.forEach((link, index) => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Obtener texto del enlace
+                const linkText = this.textContent.trim();
+                const targetSection = sectionMap[linkText];
+                
+                if (targetSection) {
+                    // Animar salida de sección actual
+                    const currentActive = document.querySelector('.section-content.active');
+                    if (currentActive) {
+                        currentActive.classList.add('slide-out');
+                        setTimeout(() => {
+                            currentActive.classList.remove('active', 'slide-out');
+                        }, 300);
+                    }
+                    
+                    // Mostrar nueva sección con animación
+                    setTimeout(() => {
+                        const targetElement = document.getElementById(targetSection);
+                        if (targetElement) {
+                            targetElement.classList.add('active');
+                            targetElement.classList.add('slide-in-right');
+                            
+                            setTimeout(() => {
+                                targetElement.classList.remove('slide-in-right');
+                            }, 800);
+                        }
+                    }, 300);
+                    
+                    // Actualizar indicador de navegación
+                    updateNavIndicator(this);
+                    
+                    // Scroll suave a la sección
+                    setTimeout(() => {
+                        const targetElement = document.getElementById(targetSection);
+                        if (targetElement) {
+                            targetElement.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
+                    }, 600);
+                }
+            });
+            
+            // Actualizar indicador en hover
+            link.addEventListener('mouseenter', function() {
+                updateNavIndicator(this);
+            });
+        });
+        
+        function updateNavIndicator(activeLink) {
+            const rect = activeLink.getBoundingClientRect();
+            const navRect = navScroller.getBoundingClientRect();
+            
+            navIndicator.style.left = (rect.left - navRect.left) + 'px';
+            navIndicator.style.width = rect.width + 'px';
+        }
+        
+        // Inicializar con la primera sección
+        updateNavIndicator(navLinks[0]);
+    }
+    
+    // Función para agregar animaciones de entrada
+    function addFadeInAnimations() {
+        const elements = document.querySelectorAll('.blog-post, .featured-card, .sidebar-widget');
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+        
+        elements.forEach(element => {
+            observer.observe(element);
+        });
+    }
+    
+    // Función para hacer el header sticky en scroll
+    function handleStickyHeader() {
+        const header = document.querySelector('header');
+        const navScroller = document.querySelector('.nav-scroller');
+        
+        if (header && navScroller) {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 100) {
+                    header.classList.add('sticky-header');
+                    navScroller.classList.add('sticky-nav');
+                } else {
+                    header.classList.remove('sticky-header');
+                    navScroller.classList.remove('sticky-nav');
+                }
+            });
+        }
+    }
+    
+    // Función para agregar efectos hover en las cards
+    function addCardHoverEffects() {
+        const cards = document.querySelectorAll('.featured-card, .blog-post');
+        
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    }
+    
+    // Función para agregar scroll suave a los enlaces internos
+    function addSmoothScrolling() {
+        const internalLinks = document.querySelectorAll('a[href^="#"]');
+        
+        internalLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    }
+    
+    // Función para agregar funcionalidad de búsqueda
+    function addSearchFunctionality() {
+        const searchInput = document.querySelector('.search-input');
+        const searchButton = document.querySelector('.search-button');
+        
+        if (searchInput && searchButton) {
+            searchButton.addEventListener('click', function() {
+                const searchTerm = searchInput.value.trim();
+                if (searchTerm) {
+                    console.log('Buscando:', searchTerm);
+                    alert(`Buscando: ${searchTerm}`);
+                }
+            });
+            
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchButton.click();
+                }
+            });
+        }
+    }
+    
+    // Función para agregar funcionalidad de "Back to top"
+    function addBackToTop() {
+        const backToTopLink = document.querySelector('.back-to-top');
+        
+        if (backToTopLink) {
+            backToTopLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+            
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    backToTopLink.style.opacity = '1';
+                    backToTopLink.style.visibility = 'visible';
+                } else {
+                    backToTopLink.style.opacity = '0';
+                    backToTopLink.style.visibility = 'hidden';
+                }
+            });
+        }
+    }
+    
+    // Función para agregar funcionalidad de navegación móvil
+    function addMobileNavigation() {
+        const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+        const mobileMenu = document.querySelector('.mobile-menu');
+        
+        if (mobileMenuToggle && mobileMenu) {
+            mobileMenuToggle.addEventListener('click', function() {
+                mobileMenu.classList.toggle('active');
+                this.classList.toggle('active');
+            });
+            
+            const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.remove('active');
+                    mobileMenuToggle.classList.remove('active');
+                });
+            });
+        }
+    }
+    
+    // Inicializar todas las funcionalidades
+    function init() {
+        // Cargar tema guardado
+        loadSavedTheme();
+        
+        // Agregar event listener al botón de cambio de tema
+        const themeToggle = document.querySelector('.theme-toggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', toggleTheme);
+        }
+        
+        // Inicializar carrusel de texto
+        initTextCarousel();
+        
+        // Inicializar navegación con animaciones
+        initNavigation();
+        
+        // Agregar animaciones de entrada
+        addFadeInAnimations();
+        
+        // Agregar header sticky
+        handleStickyHeader();
+        
+        // Agregar efectos hover en cards
+        addCardHoverEffects();
+        
+        // Agregar scroll suave
+        addSmoothScrolling();
+        
+        // Agregar funcionalidad de búsqueda
+        addSearchFunctionality();
+        
+        // Agregar funcionalidad de "Back to top"
+        addBackToTop();
+        
+        // Agregar navegación móvil
+        addMobileNavigation();
+        
+        // Agregar clase de inicialización
+        document.body.classList.add('initialized');
+    }
+    
+    // Ejecutar inicialización
+    init();
+    
+    // Escuchar cambios en la preferencia del sistema
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+        if (!localStorage.getItem('gmbo-theme')) {
+            const newTheme = e.matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+    });
+});
+
+// Función global para cambiar tema desde consola (para debugging)
+window.gmboToggleTheme = function() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('gmbo-theme', newTheme);
+    console.log('Tema cambiado a:', newTheme);
+};
